@@ -1,137 +1,74 @@
-#include<iostream>
-#include<string>
-#include<cctype>
-#include<algorithm>
-#include<vector>
-#include<random>
-#include<math.h>
-#include <iomanip>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm>
+#include <cctype>
+#include <random>
 #include <cmath>
+#include <iomanip>
 
 using namespace std;
 
-string toUpperCase(string str) {
-    transform(str.begin(), str.end(), str.begin(),
-              [](unsigned char c){ return toupper(c); });
-    return str;
+string toUpperCase(string s) {
+    transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return toupper(c); });
+    return s;
 }
 
-string remove_spaces(string text)
-{
-    string text2 = toUpperCase(text);
-    string res = "";
-    for(char c : text2)
-        if(c != ' ') res += c;
-    return res;
+string remove_spaces_and_upper(string text) {
+    text = toUpperCase(text);
+    string out;
+    for (char c : text) if (c != ' ') out.push_back(c);
+    return out;
 }
 
-vector<vector<int>> prepare_key_mat(int key_size)
-{
-    string key = "";
-    int mat_size = (int)pow((double)key_size,0.50);
-    vector<vector<int>> key_mat(mat_size,vector<int>(mat_size,-1));
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_int_distribution<> distrib(0, 25);
-    for(int i = 0; i<mat_size;i++)
-    {
-        for(int j = 0; j<mat_size;j++)
-        {
-            int temp = distrib(gen);
-            key_mat[j][i] = temp;
-        }
-    }
-
-    return key_mat;
-
-
-}
-
-int find_pos(vector<char> alphas, char s)
-{
-    for(int i = 0; i<alphas.size();i++)
-    {
-        if(alphas[i] == s)
-        {
-            return i;
-        }
-    }
+int find_pos(const vector<char>& alphas, char s) {
+    for (int i = 0; i < (int)alphas.size(); ++i) if (alphas[i] == s) return i;
     return -1;
 }
 
-vector<vector<int>> prepare_plaintext(vector<char> alphas,string text, int key_mat_size)
-{
-    int n = text.size();
-    int rem = key_mat_size - (n % key_mat_size);
-    int r = key_mat_size;
-    for(int i = 0; i< rem; i++)
-    {
-        text = text + "Z";
-    }
 
-    int c = text.size() / key_mat_size;
+vector<vector<int>> prepare_plaintext(const vector<char>& alphas, const string& text, int block_size) {
+    string t = text;
+    int n = (int)t.size();
+    int rem = (block_size - (n % block_size)) % block_size;
+    for (int i = 0; i < rem; ++i) t.push_back('Z');
+    int cols = (int)t.size() / block_size;
 
-    vector<vector<int>> prep_text(r,vector<int>(c,-1));
+    vector<vector<int>> mat(block_size, vector<int>(cols, 0));
     int k = 0;
-    for(int j = 0;j<c;j++)
-    {
-        for(int i = 0; i<r;i++)
-        {
-            prep_text[i][j] = find_pos(alphas,text[k++]); 
+    for (int j = 0; j < cols; ++j) {
+        for (int i = 0; i < block_size; ++i) {
+            mat[i][j] = find_pos(alphas, t[k++]);
         }
     }
-
-    return prep_text;
-
-
+    return mat;
 }
 
-string encrypt(vector<char> alphas, vector<vector<int>> key_mat, vector<vector<int>> prep_text_mat)
-{
-    int r1 = key_mat.size();
-    int c2 = prep_text_mat[0].size();
-    if(key_mat[0].size() != prep_text_mat.size())
-    {
-        return "Decryption not possible as matrix size not matching";
-    } 
-    vector<vector<int>> mat_mul(r1,vector<int>(c2,-1));
-    for(int i = 0; i<r1;i++)
-    {
-        for(int j = 0; j<c2;j++)
-        {
-            for(int k = 0; k<r1;k++)
-            {
-                int temp = (key_mat[i][k] * prep_text_mat[k][j]) % 26;
-                cout<<temp<<" ";
-                mat_mul[i][j] = temp;
+
+vector<vector<int>> matmul_mod26(const vector<vector<int>>& A, const vector<vector<int>>& B, int mod = 26) {
+    int n = A.size();
+    int cols = B[0].size();
+    vector<vector<int>> C(n, vector<int>(cols, 0));
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < cols; ++j) {
+            long long sum = 0;
+            for (int k = 0; k < n; ++k) {
+                sum += 1LL * A[i][k] * B[k][j];
             }
-        }
-        cout<<"\n";
-    }
-
-    string cipher = "";
-    for(int i = 0; i<mat_mul.size();i++)
-    {
-        for(int j = 0; j< mat_mul[0].size();j++)
-        {
-            cipher = cipher + alphas[mat_mul[i][j]];
+            C[i][j] = (int)((sum % mod + mod) % mod);
         }
     }
-
-    return cipher;
+    return C;
 }
+
 
 void getCofactor(const vector<vector<int>> &A, vector<vector<int>> &temp, int p, int q, int n) {
     int i = 0, j = 0;
-
-    for (int row = 0; row < n; row++) {
-        for (int col = 0; col < n; col++) {
+    for (int row = 0; row < n; ++row) {
+        for (int col = 0; col < n; ++col) {
             if (row != p && col != q) {
                 temp[i][j++] = A[row][col];
-                if (j == n - 1) {
-                    j = 0;
-                    i++;
-                }
+                if (j == n - 1) { j = 0; ++i; }
             }
         }
     }
@@ -139,13 +76,10 @@ void getCofactor(const vector<vector<int>> &A, vector<vector<int>> &temp, int p,
 
 int determinant(const vector<vector<int>> &A, int n) {
     if (n == 1) return A[0][0];
-
     int det = 0;
-    int sign = 1; 
-
+    int sign = 1;
     vector<vector<int>> temp(n, vector<int>(n));
-
-    for (int f = 0; f < n; f++) {
+    for (int f = 0; f < n; ++f) {
         getCofactor(A, temp, 0, f, n);
         det += sign * A[0][f] * determinant(temp, n - 1);
         sign = -sign;
@@ -155,210 +89,152 @@ int determinant(const vector<vector<int>> &A, int n) {
 
 vector<vector<int>> adjoint(const vector<vector<int>> &A) {
     int n = A.size();
-    vector<vector<int>> adj(n, vector<int>(n));
-
+    vector<vector<int>> adj(n, vector<int>(n, 0));
     if (n == 1) {
         adj[0][0] = 1;
         return adj;
     }
-
-    int sign = 1;
+    int sign;
     vector<vector<int>> temp(n, vector<int>(n));
-
-    // Cofactor matrix
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
             getCofactor(A, temp, i, j, n);
             sign = ((i + j) % 2 == 0) ? 1 : -1;
-
-            // Note: adj[j][i] = cofactor(i,j)
             adj[j][i] = sign * determinant(temp, n - 1);
         }
     }
-
     return adj;
 }
 
 
-
-int extended_euclidean_gcd(int a, int b, int &x, int &y)
-{
-    // goal is to find ax + by = gcd(a,b)
-    if(b == 0)
-    {
-        x = 1;
-        y = 0;
-        return a;
-    }
-
-    int x1,y1;
-    int g = extended_euclidean_gcd(b, a%b, x1,y1);
+int extended_euclidean_gcd(int a, int b, int &x, int &y) {
+    if (b == 0) { x = 1; y = 0; return a; }
+    int x1, y1;
+    int g = extended_euclidean_gcd(b, a % b, x1, y1);
     x = y1;
-    y = x1 - (a / b)*y1;
+    y = x1 - (a / b) * y1;
     return g;
 }
 
-int mod_inverse(int a,int m)
-{
-    //goal is to find x and then adjust x such that a.x = 1 (mod m); 
-    int x,y;
-    int g = extended_euclidean_gcd(a,m,x,y);
-    if(g!= 1)
-    {
-        cout<<"Modular inverse does not exists.(numbers are not coprime) for"<<a<<" and "<<m<<"\n";
-        return -1;
-    }
-
+int mod_inverse(int a, int m) {
+    a = ((a % m) + m) % m;
+    int x, y;
+    int g = extended_euclidean_gcd(a, m, x, y);
+    if (g != 1) return -1;
     return (x % m + m) % m;
 }
 
-string decrypt(string cipher, vector<char> alphas, vector<vector<int>>key_mat)
-{
-    int n = (int)pow((double)cipher.length(),0.50);
-    int k = 0;
-    vector<vector<int>> cipher_mat = prepare_plaintext(alphas,cipher,n);
-    int key_mat_deter = determinant(key_mat,key_mat.size());
-    cout<<"Determinant: "<<key_mat_deter<<"\n";
-    vector<vector<int>> key_mat_adj = adjoint(key_mat);
-    for(int i =0; i<key_mat_adj.size();i++)
-    {
-        for(int j = 0; j<key_mat_adj[0].size();j++)
-        {
-            if(key_mat_adj[i][j] < 0)
-            {
-                key_mat_adj[i][j] = -1 * ((-1 * key_mat_adj[i][j]) % alphas.size());
-            }
-            else{
-                key_mat_adj[i][j] = key_mat_adj[i][j] % alphas.size();
-            }
-            
+
+string encrypt(const vector<char>& alphas, const vector<vector<int>>& key_mat, const vector<vector<int>>& prep_text) {
+    int n = key_mat.size();
+    int cols = prep_text[0].size();
+    if ((int)key_mat[0].size() != (int)prep_text.size()) return "Encryption not possible: dimensions mismatch";
+
+    vector<vector<int>> product = matmul_mod26(key_mat, prep_text, 26);
+
+    
+    string cipher;
+    for (int j = 0; j < cols; ++j) {
+        for (int i = 0; i < n; ++i) {
+            cipher.push_back(alphas[(product[i][j] % 26 + 26) % 26]);
         }
     }
-
-    int detmod = key_mat_deter % alphas.size();
-    int mul_inv = mod_inverse(detmod,alphas.size());
-
-    for(int i =0; i<key_mat_adj.size();i++)
-    {
-        for(int j = 0; j<key_mat_adj[0].size();j++)
-        {
-            key_mat_adj[i][j] = mul_inv * key_mat_adj[i][j];
-            
-        }
-    }
-
-    for(int i =0; i<key_mat_adj.size();i++)
-    {
-        for(int j = 0; j<key_mat_adj[0].size();j++)
-        {
-            if(key_mat_adj[i][j] < 0)
-            {
-                key_mat_adj[i][j] = -1 * ((-1 * key_mat_adj[i][j]) % alphas.size());
-            }
-            else{
-                key_mat_adj[i][j] = key_mat_adj[i][j] % alphas.size();
-            }
-            
-        }
-    }
-
-    for(int i =0; i<key_mat_adj.size();i++)
-    {
-        for(int j = 0; j<key_mat_adj[0].size();j++)
-        {
-            key_mat_adj[i][j] = key_mat_adj[i][j] % alphas.size();
-            
-        }
-    }
-
-    int r1 = key_mat_adj.size();
-    int c2 = cipher_mat[0].size();
-    if(key_mat[0].size() != cipher_mat.size())
-    {
-        return "Decryption not possible as matrix size not matching" ;
-    } 
-    vector<vector<int>> mat_mul(r1,vector<int>(c2,-1));
-    for(int i = 0; i<r1;i++)
-    {
-        for(int j = 0; j<c2;j++)
-        {
-            for(int k = 0; k<r1;k++)
-            {
-                int temp = (key_mat_adj[i][k] * cipher_mat[k][j]) % 26;
-                cout<<temp<<" ";
-                mat_mul[i][j] = temp;
-            }
-        }
-        cout<<"\n";
-    }
-
-    string res = "";
-    for(int i = 0; i<mat_mul.size();i++)
-    {
-        for(int j = 0; j< mat_mul[0].size();j++)
-        {
-            res = res + alphas[mat_mul[i][j]];
-        }
-    }
-
-
-    return res;
-
+    return cipher;
 }
 
-int main()
-{
-    vector<char> alphas = {'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'};
+string decrypt(const vector<char>& alphas, const vector<vector<int>>& key_mat, const string& cipher) {
+    int n = key_mat.size();
+    
+    vector<vector<int>> cipher_mat = prepare_plaintext(alphas, cipher, n);
+
+    
+    int det = determinant(key_mat, n);
+    int mod = (int)alphas.size();
+    int detmod = ((det % mod) + mod) % mod;
+    int detInv = mod_inverse(detmod, mod);
+    if (detInv == -1) {
+        return "Decryption not possible: key matrix not invertible modulo 26 (det not coprime with 26).";
+    }
+
+    vector<vector<int>> adj = adjoint(key_mat);
+    vector<vector<int>> key_inv(n, vector<int>(n));
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            int a = ((adj[i][j] % mod) + mod) % mod;
+            key_inv[i][j] = (int)((1LL * detInv * a) % mod);
+        }
+    }
+
+    
+    vector<vector<int>> plain_num = matmul_mod26(key_inv, cipher_mat, mod);
+
+    
+    string res;
+    int cols = plain_num[0].size();
+    for (int j = 0; j < cols; ++j) {
+        for (int i = 0; i < n; ++i) {
+            res.push_back(alphas[(plain_num[i][j] % mod + mod) % mod]);
+        }
+    }
+    return res;
+}
+
+
+int main() {
+    vector<char> alphas(26);
+    for (int i = 0; i < 26; ++i) alphas[i] = 'A' + i;
+
     int key_size;
-    cout<<"Enter the key size(should be proper square):\n";
-    cin>>key_size;
+    cout << "Enter key matrix size (n) (e.g. 2 for 2x2, 3 for 3x3): ";
+    cin >> key_size;
+    cin.ignore();
 
     string text;
-    cout<<"Enter the plaintext:\n";
-    cin.ignore();
-    getline(cin,text);
+    cout << "Enter the plaintext:\n";
+    getline(cin, text);
 
-    string processed_plaintext = remove_spaces(text);
+    string processed_plaintext = remove_spaces_and_upper(text);
+    cout << "Processed plaintext: " << processed_plaintext << "\n";
 
-    vector<vector<int>> key_mat = prepare_key_mat(key_size);
-    vector<vector<int>> prep_text = prepare_plaintext(alphas,processed_plaintext,(int)pow((double)key_size,0.50));
+    cout << "Do you want to enter the key matrix manually? (y/n): ";
+    char choice; cin >> choice;
 
-    cout<<"Key matrix prepared:-\n";
-
-    for(int i = 0; i<key_mat.size();i++)
-    {
-        for(int j = 0; j< key_mat.size();j++)
-        {
-            cout<<key_mat[i][j]<<" ";         
+    vector<vector<int>> key_mat(key_size, vector<int>(key_size));
+    if (choice == 'y' || choice == 'Y') {
+        cout << "Enter key matrix (row by row), entries 0..25:\n";
+        for (int i = 0; i < key_size; ++i) {
+            for (int j = 0; j < key_size; ++j) {
+                cin >> key_mat[i][j];
+                key_mat[i][j] = ((key_mat[i][j] % 26) + 26) % 26;
+            }
         }
-        cout<<"\n";
+    } else {
+        random_device rd; mt19937 gen(rd()); uniform_int_distribution<> d(0, 25);
+        for (int i = 0; i < key_size; ++i)
+            for (int j = 0; j < key_size; ++j)
+                key_mat[i][j] = d(gen);
     }
 
-    cout<<"Prepared plaintext matrix:-\n";
-
-    for(int i = 0; i<prep_text.size();i++)
-    {
-        for(int j = 0; j<prep_text[0].size();j++)
-        {
-            cout<<prep_text[i][j]<<" ";
-        }
-        cout<<"\n";
+    cout << "Key matrix (" << key_size << "x" << key_size << "):\n";
+    for (int i = 0; i < key_size; ++i) {
+        for (int j = 0; j < key_size; ++j) cout << setw(4) << key_mat[i][j] << " ";
+        cout << "\n";
     }
 
-    string cipher = encrypt(alphas,key_mat,prep_text);
 
-    cout<<"Cipher text: "<< cipher<<"\n";
+    vector<vector<int>> prep_text = prepare_plaintext(alphas, processed_plaintext, key_size);
+    cout << "Prepared plaintext matrix (numeric):\n";
+    for (int i = 0; i < key_size; ++i) {
+        for (int j = 0; j < (int)prep_text[0].size(); ++j) cout << setw(4) << prep_text[i][j] << " ";
+        cout << "\n";
+    }
 
 
-    string res = decrypt(cipher,alphas,key_mat);
+    string cipher = encrypt(alphas, key_mat, prep_text);
+    cout << "Cipher text: " << cipher << "\n";
 
-    cout<<"Plaintext after decrypting: "<<res<<"\n";
-
-    
-
-    
+    string recovered = decrypt(alphas, key_mat, cipher);
+    cout << "Recovered plaintext (after decrypt): " << recovered << "\n";
 
     return 0;
-
-
 }
