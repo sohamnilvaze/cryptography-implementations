@@ -48,6 +48,21 @@ vector<int> compression_permutation(){
     return ip;
 }
 
+vector<int> expansion_permutation(){
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> distrib(1,4);
+
+    vector<int> ep;
+    while(ep.size() < 8)
+    {
+        int ri = distrib(gen);
+        ep.push_back(ri);
+    }
+
+    return ep;
+}
+
 vector<int> process_entered_key(string key)
 {
     vector<int> processed_key;
@@ -132,20 +147,97 @@ vector<vector<int>> subkey_generation(vector<int> key)
     res.push_back(cp);
 
     return res;
+}
 
+string toUpperCase(string s) {
+    transform(s.begin(), s.end(), s.begin(), [](unsigned char c){ return toupper(c); });
+    return s;
+}
 
+string remove_spaces_and_upper(string text) {
+    text = toUpperCase(text);
+    string out;
+    for (char c : text) if (c != ' ') out.push_back(c);
+    return out;
+}
 
+vector<int> chartobits(char c)
+{
+    vector<int> bits(8);
+    for(int i = 7;i>=0;i--)
+    {
+        bits[7-i] = (c >> i) & i;
+    }
+    return bits;
+}
 
+char bitsToChar(const vector<int>& bits) {
+    char c = 0;
+    for (int i = 0; i < 8; i++) {
+        c = (c << 1) | bits[i];
+    }
+    return c;
+}
+
+vector<vector<int>> process_plaintext(string plaintext)
+{
+    vector<vector<int>> processed_plaintext;
+    for(int i=0; i<plaintext.size();i++)
+    {
+        vector<int> bits = chartobits(plaintext[i]);
+        processed_plaintext.push_back(bits);
+    }
+
+    return processed_plaintext;
+}
+
+string encrypt_first_round(vector<vector<int>> plaintext, vector<int> first_subkey)
+{
+    
+    vector<int> ip = compression_permutation();
+
+    for(int i=0; i<plaintext.size();i++)
+    {
+        vector<int> plaintext_to_be_processed = plaintext[i];
+        vector<int> afterip;
+        for(int j=0; j<ip.size();j++)
+        {
+            afterip.push_back(plaintext_to_be_processed[ip[j]]);
+        }
+        vector<int> left_half(afterip.begin(),afterip.begin()+4);
+        vector<int> right_half(afterip.begin()+4,afterip.end());
+        
+        vector<int> ep = expansion_permutation();
+        vector<int> ep_on_right;
+        for(int j = 0; j<ep.size();j++)
+        {
+            ep_on_right.push_back(right_half[ep[j]]);
+        }
+        vector<int> res_on_xor;
+        for(int j = 0; j<ep_on_right.size();j++)
+        {
+            res_on_xor.push_back(ep_on_right[j] ^ first_subkey[j]);
+        }
+
+        
+
+    }
 
 }
 
 
-
 int main()
 {
-    string key;
+    string key,plaintext;
     cout<<"Enter the key in binary form(10 bits):\n";
     cin>>key;
+    cout<<"Enter the plaintext:\n";
+    cin.ignore();
+    getline(cin,plaintext);
+
+    string processed_text = remove_spaces_and_upper(plaintext);
+
+    vector<vector<int>> broken_plaintext = process_plaintext(processed_text);
 
     vector<int> processed_key = process_entered_key(key);
     cout<<"Processed key: ";
