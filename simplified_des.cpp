@@ -207,27 +207,27 @@ string remove_spaces_and_upper(string text) {
 vector<int> chartobits(char c)
 {
     vector<int> bits(8);
+    unsigned char uc = static_cast<unsigned char>(c);
     for(int i = 7;i>=0;i--)
     {
-        bits[7-i] = (c >> i) & 1;
+        bits[7-i] = (uc >> i) & 1;
     }
     return bits;
 }
 
-char bitsToChar(const vector<int>& bits) {
-    char c = 0;
+unsigned char bitsToChar(const vector<int>& bits) {
+    unsigned char c = 0;
     for (int i = 0; i < 8; i++) {
         c = (c << 1) | bits[i];
     }
-    cout<<c - 'A'<<"\n";
-    if(c - 'A' > 26)
-    {
-        char temp = ((c-'A')%26) + 'A';
-        cout<<temp<<"\n";
-    }
-    else{
-        cout<<c<<"\n";
-    }
+    // if(c - 'A' > 26)
+    // {
+    //     char temp = ((c-'A')%26) + 'A';
+    //     cout<<temp<<"\n";
+    // }
+    // else{
+    //     cout<<c<<"\n";
+    // }
     return c;
 }
 
@@ -239,6 +239,23 @@ string bitsToHex(const vector<int>& bits) {
     stringstream ss;
     ss << hex << uppercase << setw(2) << setfill('0') << value;
     return ss.str();
+}
+
+string Hextostr(const string hextext){
+    string asciitext = "";
+    if(hextext.length() % 2 != 0)
+    {
+        return "Invalid hex text provided";
+    }
+
+    for(size_t i = 0; i<hextext.length();i++)
+    {
+        string bytestr = hextext.substr(i,2);
+        int intval = stoi(bytestr,nullptr,16);
+        asciitext = asciitext + static_cast<char>(intval);
+    }
+
+    return asciitext;
 }
 
 vector<vector<int>> process_plaintext(string plaintext)
@@ -422,6 +439,140 @@ vector<vector<int>> encrypt(vector<vector<int>> plaintext, vector<int> first_sub
 }
 
 
+
+
+vector<vector<int>> decrypt(vector<vector<int>> plaintext, vector<int> first_subkey, vector<int> second_subkey, vector<int> ip, vector<int> ep, vector<int> p4, vector<int> fp)
+{
+    vector<vector<int>> to_ret;
+    for(int i=0; i<plaintext.size();i++)
+    {
+        vector<int> plaintext_to_be_processed = plaintext[i];
+        vector<int> afterip;
+        for(int j=0; j<ip.size();j++)
+        {
+            afterip.push_back(plaintext_to_be_processed[ip[j]-1]);
+        }
+        vector<int> left_half(afterip.begin(),afterip.begin()+4);
+        vector<int> right_half(afterip.begin()+4,afterip.end());
+        
+        
+        vector<int> ep_on_right;
+        for(int j = 0; j<ep.size();j++)
+        {
+            ep_on_right.push_back(right_half[ep[j]-1]);
+        }
+        vector<int> res_on_xor;
+        for(int j = 0; j<ep_on_right.size();j++)
+        {
+            res_on_xor.push_back(ep_on_right[j] ^ second_subkey[j]);
+        }
+        vector<int> s_box_in_right;
+        for(int i = 0;i<res_on_xor.size();i = i+4)
+        {
+            if(i == 0)
+            {
+                vector<int> res = process_with_s_box(S_box_0,res_on_xor[i],res_on_xor[i+1],res_on_xor[i+2],res_on_xor[i+3]);
+                s_box_in_right.insert(s_box_in_right.end(),res.begin(),res.end());
+            }
+            else{
+                vector<int> res = process_with_s_box(S_box_1,res_on_xor[i],res_on_xor[i+1],res_on_xor[i+2],res_on_xor[i+3]);
+                s_box_in_right.insert(s_box_in_right.end(),res.begin(),res.end());
+            }
+        }
+
+        
+        vector<int> f_right;
+        for(int i = 0;i<p4.size();i++)
+        {
+            f_right.push_back(s_box_in_right[p4[i]-1]);
+        }
+
+        vector<int> new_left = right_half;
+        vector<int> new_right;
+        for(int i=0; i<4;i++)
+        {
+            new_right.push_back(f_right[i]^left_half[i]);
+        }
+
+        new_left.insert(new_left.end(),new_right.begin(),new_right.end());
+
+
+        vector<int> afterip2;
+        for(int j=0; j<ip.size();j++)
+        {
+            afterip2.push_back(new_left[ip[j]-1]);
+        }
+
+
+        vector<int> left_half2(afterip2.begin(),afterip2.begin()+4);
+        vector<int> right_half2(afterip2.begin()+4,afterip2.end());
+
+
+        vector<int> ep_on_right2;
+        for(int j = 0; j<ep.size();j++)
+        {
+            ep_on_right2.push_back(right_half2[ep[j]-1]);
+        }
+
+        vector<int> res_on_xor2;
+        for(int j = 0; j<ep_on_right2.size();j++)
+        {
+            res_on_xor2.push_back(ep_on_right2[j] ^ first_subkey[j]);
+        }
+
+
+        vector<int> s_box_in_right2;
+        for(int i = 0;i<res_on_xor2.size();i = i+4)
+        {
+            if(i == 0)
+            {
+                vector<int> res = process_with_s_box(S_box_0,res_on_xor2[i],res_on_xor2[i+1],res_on_xor2[i+2],res_on_xor2[i+3]);
+                s_box_in_right2.insert(s_box_in_right2.end(),res.begin(),res.end());
+            }
+            else{
+                vector<int> res = process_with_s_box(S_box_1,res_on_xor2[i],res_on_xor2[i+1],res_on_xor2[i+2],res_on_xor2[i+3]);
+                s_box_in_right2.insert(s_box_in_right2.end(),res.begin(),res.end());
+            }
+        }
+
+        vector<int> f_right2;
+        for(int i = 0;i<p4.size();i++)
+        {
+            f_right2.push_back(s_box_in_right2[p4[i]-1]);
+        }
+
+
+        vector<int> new_left2 = right_half2;
+        vector<int> new_right2;
+        for(int i=0; i<4;i++)
+        {
+            new_right2.push_back(f_right2[i]^left_half2[i]);
+        }
+
+        new_left2.insert(new_left2.end(),new_right2.begin(),new_right2.end());
+
+
+        //Final Swapping
+        vector<int> new_left3(new_left2.begin()+4,new_left2.end());
+        vector<int> new_right3(new_left2.begin(),new_left2.begin()+4);
+
+        new_left3.insert(new_left3.end(),new_right3.begin(),new_right3.end());
+        //Final permutation
+        vector<int> cipher;
+        for(int i=0; i<fp.size();i++)
+        {
+            cipher.push_back(new_left3[fp[i]-1]);
+        }
+
+        to_ret.push_back(cipher);
+    }
+
+    return to_ret;
+
+}
+
+
+
 int main()
 {
     string key,plaintext;
@@ -474,7 +625,15 @@ int main()
     cout<<"Final ciphertext in hex:\n";
     for(auto &blocks: cipher_to_proc)
     {
-        cout<< bitsToHex(blocks) <<" ";
+        cout<< bitsToChar(blocks) <<" ";
+    }
+
+    vector<vector<int>> retrieved_plaintext = decrypt(cipher_to_proc,first_subkey,second_subkey,ip_e,ep,p4,fp);
+
+    cout<<"Retrieved plaintext after decryption:\n";
+    for(auto &blocks : retrieved_plaintext)
+    {
+        cout<< bitsToChar(blocks) <<" ";
     }
 
     return 0;
