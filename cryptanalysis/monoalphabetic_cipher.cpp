@@ -10,6 +10,8 @@ using namespace std;
 
 static vector<float> relaive_letter_frequencies = {8.167,1.492,2.782,4.253,12.702,2.228,2.015,6.094,6.996,0.153,0.772,4.025,2.406,6.749,7.507,1.929,0.095,5.987,6.327,9.056,2.758,0.978,2.36,0.15,1.974,0.074};
 
+static vector<char> ordered_letter_coourences = {'E','T','A','O','I','N','S','H','R','D','L','C','U','M','W','F','G','Y','P','X','B','V','K','J','X','Z'};
+
 void analyse_ciphertext(string text)
 {
     map<char,int> mp;
@@ -45,19 +47,55 @@ void analyse_ciphertext(string text)
         mp[text[i]]++;
     }
 
+    vector<int> freqs;
+    vector<char> alphas;
     for(auto it: mp)
     {
-        cout<<it.first<<" "<<it.second<<"\t";
+        cout<<it.first<<" "<<it.second<<" "<<((double)it.second / n)<<"\t";
+        freqs.push_back(it.second);
+        alphas.push_back(it.first);
     }
+
+    for(int i=0; i<alphas.size()-1;i++)
+    {
+        for(int j=0;j<alphas.size()-i-1;j++)
+        {
+            if(freqs[j] < freqs[j+1])
+            {
+                char temp = alphas[j];
+                alphas[j] = alphas[j+1];
+                alphas[j+1] = temp;
+
+                int t = freqs[j];
+                freqs[j] = freqs[j+1];
+                freqs[j+1] = t;
+            }
+        }
+    }
+
+    map<char,char> fin_mappig;
+    for(int i=0; i<alphas.size();i++)
+    {
+        fin_mappig[alphas[i]] = ordered_letter_coourences[i];
+    }
+
+    for(char c: text)
+    {
+        cout<<fin_mappig[c];
+    }
+
+
+
 }
 
 int main()
 {
     string ciphertext;
     cout<<"Enter the cipher text";
-    //MLVXFMPXYFUFPSFP
+    cin>>ciphertext;
 
-    analyse_ciphertext("MLVXFMPXYFUFPSFP"); 
+    analyse_ciphertext(ciphertext); 
+
     return 0;
 
 }
