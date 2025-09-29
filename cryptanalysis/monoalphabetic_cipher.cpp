@@ -51,7 +51,7 @@ void analyse_ciphertext(string text)
     vector<char> alphas;
     for(auto it: mp)
     {
-        cout<<it.first<<" "<<it.second<<" "<<((double)it.second / n)<<"\t";
+        cout<<it.first<<" "<<it.second<<" "<<((double)it.second / n)<<"\n";
         freqs.push_back(it.second);
         alphas.push_back(it.first);
     }
@@ -88,13 +88,34 @@ void analyse_ciphertext(string text)
 
 }
 
+void mapping_n_grams(string ciphertext, int n)
+{
+    map<string,int> mp;
+    cout<<"Mapping " << n << " grams:\n";
+    int l = ciphertext.length();
+    for(int i=0; i<l - n;i++)
+    {
+        mp[ciphertext.substr(i,n)]++;
+    }
+
+    for(auto it: mp)
+    {
+        cout << it.first << ": " << it.second<<"\n";
+    }
+}
+
 int main()
 {
-    string ciphertext;
-    cout<<"Enter the cipher text";
-    cin>>ciphertext;
+    string ciphertext = "HVUTNAHNRBWNMASMNVMFATSVITVNMOMFTBHEXWFJTBCZVAHFMRVNRWEVFTRVNITOMCMMEJTAMUHVIKWBHVHRTBFMKFMNMEVTVHOMNHEJWNRWU";
+    // cout<<"Enter the cipher text: ";
+    // cin>>ciphertext;
 
-    analyse_ciphertext(ciphertext); 
+    analyse_ciphertext(ciphertext);
+    
+    mapping_n_grams(ciphertext,2);
+
+    // mapping_n_grams(ciphertext,3);
+
 
     return 0;
 

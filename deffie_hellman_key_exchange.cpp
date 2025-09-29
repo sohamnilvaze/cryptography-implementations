@@ -1,135 +1,104 @@
-#include<iostream>
-#include<vector>
-#include<random>
-#include<algorithm>
-#include<sstream>
-#include<iomanip>
-#include<cmath>
-
+#include <bits/stdc++.h>
 using namespace std;
 
-vector<int> find_reduced_residues(int n)
-{
-    vector<int> res;
-    res.push_back(1);
-    for(int i=2;i<n;i++)
-    {
-        if(gcd(i,n) == 1)
-        {
-            res.push_back(i);
-        }
+// fast modular exponentiation: computes (base^exp) % mod
+long long mod_pow(long long base, long long exp, long long mod) {
+    long long res = 1 % mod;
+    base %= mod;
+    while (exp > 0) {
+        if (exp & 1) res = (res * base) % mod;
+        base = (base * base) % mod;
+        exp >>= 1;
     }
     return res;
 }
 
-
-
-bool is_prime(int n)
-{
-    int no_of_factors = 0;
-    for(int i=1;i<n+1;i++)
-    {
-        if(n % i == 0)
-        {
-            no_of_factors++;
-        }
-    }
-
-    return no_of_factors == 2;
-
+// simple gcd
+int gcd_int(int a, int b) {
+    return b == 0 ? a : gcd_int(b, a % b);
 }
 
-bool is_all(vector<int> all_mods, int n)
-{
-    if(is_prime(n))
-    {
-        for(int i=1;i<n;i++)
-        {
-            if(find(all_mods.begin(),all_mods.end(),i) == all_mods.end())
-            {
-                return false;
-            }
-        }
-    }
-    else{
-        vector<int> red_res = find_reduced_residues(n);
-        for(int i=0;i<red_res.size();i++)
-        {
-            if(find(all_mods.begin(),all_mods.end(),red_res[i]) == all_mods.end())
-            {
-                return false;
-            }
-        }
-    }
+// primality test (simple, OK for moderate p)
+bool is_prime(int n) {
+    if (n < 2) return false;
+    if (n % 2 == 0) return n == 2;
+    for (int i = 3; 1LL * i * i <= n; i += 2)
+        if (n % i == 0) return false;
     return true;
 }
 
-int gcd(int a, int b)
-{
-    if(b == 0)
-    {
-        return a;
+// factorize n and return distinct prime factors
+vector<int> factorize(int n) {
+    vector<int> factors;
+    for (int p = 2; 1LL * p * p <= n; ++p) {
+        if (n % p == 0) {
+            factors.push_back(p);
+            while (n % p == 0) n /= p;
+        }
     }
-
-    return gcd(b,a%b);
+    if (n > 1) factors.push_back(n);
+    return factors;
 }
 
-
-int find_primitive_root(int n)
-{
-    if(is_prime(n))
-    {
-        for(int i=1; i<n;i++)
-        {
-            vector<int> temp;
-            for(int j=0; j<n-1;j++)
-            {
-                temp.push_back((int)(pow((double)i,(double)j))%n);
-            }
-            if(is_all(temp,n))
-            {
-                return i;
-            }
+// find a primitive root modulo p (p must be prime)
+int find_primitive_root(int p) {
+    if (!is_prime(p)) return -1;
+    int phi = p - 1;
+    vector<int> factors = factorize(phi);
+    for (int g = 2; g < p; ++g) {
+        bool ok = true;
+        for (int q : factors) {
+            // if g^(phi/q) ≡ 1 (mod p) then g is NOT a primitive root
+            if (mod_pow(g, phi / q, p) == 1) { ok = false; break; }
         }
-        
+        if (ok) return g;
     }
-
-    else{
-        vector<int> reduced_res = find_reduced_residues(n);
-        cout<<"Reduced root of "<<n<<"\n";
-        for(int i=0;i<reduced_res.size();i++)
-        {
-            cout<<reduced_res[i]<<", ";
-        }
-        cout<<"\n";
-        for(int i=0; i<reduced_res.size();i++)
-        {
-            vector<int> temp;
-            for(int j=0; j<n-1;j++)
-            {
-                temp.push_back((int)(pow((double)reduced_res[i],(double)j))%n);
-            }
-            for(int k=0;k<temp.size();k++)
-            {
-                cout<<temp[k]<<", ";
-            }
-            cout<<"\n";
-            if(is_all(temp,n))
-            {
-                return reduced_res[i];
-            }
-        }
-    }
-
     return -1;
 }
 
-int main()
-{
-    int num;
-    cout<<"Enter a number:\n";
-    cin>>num;
+int main() {
+    int p;
+    cout << "Enter a prime modulus p: ";
+    if (!(cin >> p)) return 0;
 
-    int prim_root = find_primitive_root(num);
-    cout<<"Primitive root:-"<<prim_root<<"\n";
+    if (!is_prime(p)) {
+        cout << "Provided p is not prime. This program expects a prime modulus.\n";
+        return 0;
+    }
+
+    int g = find_primitive_root(p);
+    if (g == -1) {
+        cout << "No primitive root found (unexpected for prime p).\n";
+        return 0;
+    }
+    cout << "Found primitive root g = " << g << " (mod " << p << ")\n";
+
+    long long Xa, Xb;
+    cout << "Enter private key Xa for A (0 < Xa < " << p << "): ";
+    cin >> Xa;
+    cout << "Enter private key Xb for B (0 < Xb < " << p << "): ";
+    cin >> Xb;
+    if (Xa <= 0 || Xa >= p || Xb <= 0 || Xb >= p) {
+        cout << "Private keys should be in range (0, p).\n";
+        return 0;
+    }
+
+    // public values (sent over insecure channel)
+    long long Ya = mod_pow(g, Xa, p); // A -> publishes Ya
+    long long Yb = mod_pow(g, Xb, p); // B -> publishes Yb
+    cout << "A publishes Ya = g^Xa mod p = " << Ya << "\n";
+    cout << "B publishes Yb = g^Xb mod p = " << Yb << "\n";
+
+    // shared secrets
+    long long shared_from_A = mod_pow(Yb, Xa, p); // (g^Xb)^Xa = g^(Xa*Xb)
+    long long shared_from_B = mod_pow(Ya, Xb, p); // (g^Xa)^Xb
+    cout << "Shared key computed by A = Yb^Xa mod p = " << shared_from_A << "\n";
+    cout << "Shared key computed by B = Ya^Xb mod p = " << shared_from_B << "\n";
+
+    if (shared_from_A == shared_from_B)
+        cout << "Success: shared keys match.\n";
+    else
+        cout << "Failure: shared keys differ (bug).\n";
+
+    return 0;
 }
