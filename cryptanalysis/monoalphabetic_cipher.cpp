@@ -12,7 +12,9 @@ static vector<float> relaive_letter_frequencies = {8.167,1.492,2.782,4.253,12.70
 
 static vector<char> ordered_letter_coourences = {'E','T','A','O','I','N','S','H','R','D','L','C','U','M','W','F','G','Y','P','X','B','V','K','J','X','Z'};
 
-void analyse_ciphertext(string text)
+static vector<string> most_freq_bigrams = {"TH","HE","IN","ER","AN","RE","ON","AT","EN","ND","TI","ES","OR","TE","OF","ED","IS","IT","AL","AR","ST","NT","TO"};
+
+map<char,char>  analyse_ciphertext(string text)
 {
     map<char,int> mp;
     mp['A'] = 0;
@@ -84,6 +86,8 @@ void analyse_ciphertext(string text)
         cout<<fin_mappig[c];
     }
 
+    return fin_mappig;
+
 
 
 }
@@ -97,10 +101,11 @@ void mapping_n_grams(string ciphertext, int n)
     {
         mp[ciphertext.substr(i,n)]++;
     }
-
+    int max_occ = 0;
     for(auto it: mp)
     {
         cout << it.first << ": " << it.second<<"\n";
+        max_occ = max(max_occ,it.second);
     }
 }
 
@@ -110,7 +115,7 @@ int main()
     // cout<<"Enter the cipher text: ";
     // cin>>ciphertext;
 
-    analyse_ciphertext(ciphertext);
+    map<char,char> fin_mapping = analyse_ciphertext(ciphertext);
     
     mapping_n_grams(ciphertext,2);
 

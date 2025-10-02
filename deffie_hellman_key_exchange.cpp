@@ -80,7 +80,7 @@ int main() {
     cin >> Xb;
     if (Xa <= 0 || Xa >= p || Xb <= 0 || Xb >= p) {
         cout << "Private keys should be in range (0, p).\n";
-        return 0;
+        return 0;   
     }
 
     // public values (sent over insecure channel)
@@ -101,4 +101,6 @@ int main() {
         cout << "Failure: shared keys differ (bug).\n";
 
     return 0;
+
+
 }
