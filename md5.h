@@ -208,6 +208,7 @@ vector<vector<char>> padding(vector<vector<int>> string_bits, string len_str_in_
     }
 
     cout<<"length of entire string before adding length:- " << entire.length() << "\n";
+    cout<<"length of the input string :- " << len_str_in_bin << "\n";
 
     if( len_str_in_bin.size() < 64)
     {

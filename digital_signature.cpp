@@ -5,6 +5,55 @@ uint32_t B = 0xefcdab89;
 uint32_t C = 0x98badcfe;
 uint32_t D = 0x10325476;
 
+//selecting a prime number q(10 bit) q = 101
+string q = "1100101";
+
+//selecting p such that p is prime number and p = qk + 1 so selecting p = 3031
+string p = "101111010111";
+
+//selecting h (1 < h < p-1) so here h = 1950
+string h = "11110011110";
+
+//computing g = h^k mod p such that g > 1
+// so here h^2 = 1950*1950 = 3802500  h^k mod p = 3802500 % 3031 = 1626
+string g = "11001011010";
+
+//selecting a private key X such that [0 < x < q] so x = 67
+string x = "1000011";
+
+//selecting a secret key k such that 0 < k < q
+int k = 59;
+
+long long power_with_modulo(long long base, long long exp, long long mod) {
+    long long res = 1;
+    // Take modulo of base to handle cases where base >= mod
+    base %= mod;
+
+    while (exp > 0) {
+        // If exp is odd, multiply result with current base
+        if (exp % 2 == 1) { // or (exp & 1)
+            // Perform multiplication and take modulo at each step to prevent overflow
+            res = (res * base) % mod;
+        }
+
+        // Square the base and take modulo
+        base = (base * base) % mod;
+        // Halve the exponent (equivalent to exp = exp / 2 or exp >>= 1)
+        exp >>= 1;
+    }
+
+    return res;
+}
+
+pair<int,int> signing_algorithm(int g, int p, int x, int y, int q, string final_hash)
+{
+    
+    int temp = power_with_modulo(g,k,p);
+    int r = temp % q;
+    
+}
+
+
 int main()
 {
     string plaintext,A_fin,B_fin,C_fin,D_fin;
@@ -94,5 +143,16 @@ int main()
     string final_md5_hash = A_fin + B_fin + C_fin + D_fin;
 
     cout<<"Final 128 bit hash value is:- " << final_md5_hash << "\n";
+
+    //computing y = g^x mod p
+    int g = 1626;
+    int x = 67;
+    int p = 3031;
+    int q = 101;
+    long long y = power_with_modulo(1626,67,3031);
+
+    cout<<"Public key (p | g | x | y) is:- " << p << " | " << g << " | " << x << " | " << y << "\n";
+
+
 
 }
